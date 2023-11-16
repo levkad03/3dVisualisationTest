@@ -87,6 +87,39 @@ const createEllipse = (scene, coneHeight, xRadius, yRadius) => {
   scene.add(ellipse);
 };
 
+const createSphere = (scene, coneHeight, xRadius, yRadius) => {
+  // Параметры THREE.SphereGeometry:
+  // 1. Радиус сферы
+  // 2. Количество сегментов по горизонтали
+  // 3. Количество сегментов по вертикали
+  const biggerRadius = Math.max(xRadius, yRadius);
+  const smallerRadius = Math.min(xRadius, yRadius);
+  const sphereGeometry = new THREE.SphereGeometry(
+    biggerRadius,
+    32,
+    32,
+    Math.PI / 2,
+    Math.PI
+  );
+
+  const sphereMaterial = new THREE.MeshBasicMaterial({
+    color: 0x0000ff, // Синий цвет
+    //wireframe: true,
+  });
+
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.set(coneHeight / 2, 0, 0);
+  //sphere.rotation.z = Math.PI / 2;
+
+  if (smallerRadius == yRadius) {
+    sphere.scale.z = smallerRadius;
+  } else if (smallerRadius == xRadius) {
+    sphere.scale.y = smallerRadius;
+  }
+
+  scene.add(sphere);
+};
+
 export const createLightRayScene = () => {
   // Создание сцены
   const scene = new THREE.Scene();
@@ -105,14 +138,15 @@ export const createLightRayScene = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // for ellipse
-  const xRadius = 1;
-  const yRadius = 0.5;
+  // Радиусы эллипса
+  const xRadius = 0.5;
+  const yRadius = 1;
 
   // Отрисовка моделей
   const coneHeight = createCone(scene, xRadius, yRadius);
   //createRectangle(scene, coneHeight);
   createEllipse(scene, coneHeight, xRadius, yRadius);
+  createSphere(scene, coneHeight, xRadius, yRadius);
 
   renderer.render(scene, camera);
 
