@@ -1,16 +1,18 @@
 // LightRay.js
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { smootherstep } from "three/src/math/mathutils";
 
 // Функция для создания конуса (луча)
-const createCone = (scene) => {
+const createCone = (scene, xRadius, yRadius) => {
   /* Parameters of THREE.ConeGeometry(...): 
       1. radius (is value = bigger_angle / 2)
       2. height (is maxDistance ?? from mudule 4)
       3. section amount
  */
+  const smallerRadius = Math.min(xRadius, yRadius);
 
-  const coneGeometry = new THREE.ConeGeometry(1, 4, 32);
+  const coneGeometry = new THREE.ConeGeometry(1, 4, 32, undefined, true);
   const coneHeight = coneGeometry.parameters.height;
   const coneMaterial = new THREE.MeshBasicMaterial({
     color: 0xff0000,
@@ -18,8 +20,17 @@ const createCone = (scene) => {
     opacity: 0.7, // Прозрачность (0 - полностью прозрачно, 1 - непрозрачно)
     transparent: true,
   });
+
   const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+
+  if (smallerRadius == yRadius) {
+    cone.scale.z = smallerRadius;
+  } else if (smallerRadius == xRadius) {
+    cone.scale.x = smallerRadius;
+  }
+
   cone.rotation.z = Math.PI / 2;
+
   scene.add(cone);
   return coneHeight;
 };
@@ -45,7 +56,7 @@ const createRectangle = (scene, coneHeight) => {
 };
 
 // Функция для создания эллипса
-const createEllipse = (scene, coneHeight) => {
+const createEllipse = (scene, coneHeight, xRadius, yRadius) => {
   /* Ellipse is Smax
     Parameters of ellipseShape.ellipse(...):
     1. x: Координата x центра эллипса (в данном случае 0).
@@ -58,7 +69,7 @@ const createEllipse = (scene, coneHeight) => {
   */
 
   const ellipseShape = new THREE.Shape();
-  ellipseShape.ellipse(0, 0, 1, 0.5, 0, Math.PI * 2, 0);
+  ellipseShape.ellipse(0, 0, xRadius, yRadius, 0, Math.PI * 2, 0);
   const ellipseGeometry = new THREE.ExtrudeGeometry(ellipseShape, {
     depth: 0,
     bevelEnabled: false,
@@ -94,10 +105,14 @@ export const createLightRayScene = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+  // for ellipse
+  const xRadius = 1;
+  const yRadius = 0.5;
+
   // Отрисовка моделей
-  const coneHeight = createCone(scene);
+  const coneHeight = createCone(scene, xRadius, yRadius);
   //createRectangle(scene, coneHeight);
-  createEllipse(scene, coneHeight);
+  createEllipse(scene, coneHeight, xRadius, yRadius);
 
   renderer.render(scene, camera);
 
