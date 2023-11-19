@@ -1,8 +1,7 @@
-// LightRay.js
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { CSG } from "three-csg-ts";
 
-// Функция для создания конуса (луча)
 const createPyramidWithPoints = (scene, rectWidth, rectHeight) => {
   const smallerSide = Math.min(rectWidth, rectHeight);
   const biggerSide = Math.max(rectWidth, rectHeight);
@@ -88,24 +87,26 @@ const createPyramidWithPoints = (scene, rectWidth, rectHeight) => {
   return apex.y;
 };
 
-// Функция для создания прямоугольника
-const createRectangle = (scene, coneHeight, rectWidth, rectHeight) => {
-  /* Rectangle is Smax
-    Parameters of THREE.BoxGeometry(...): 
-      1. width 
-      2. depth
-      3. height
-  */
-
-  const rectGeometry = new THREE.BoxGeometry(rectWidth, 0, rectHeight); // Параметры: ширина, глубина, высота
-  const rectMaterial = new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
+const createMaxSphere = (scene, maxDistance) => {
+  // Параметры THREE.SphereGeometry:
+  // 1. Радиус сферы
+  // 2. Количество сегментов по горизонтали
+  // 3. Количество сегментов по вертикали
+  //const biggerRadius = Math.max(xRadius, yRadius);
+  //const smallerRadius = Math.min(xRadius, yRadius);
+  let sphereGeometry = new THREE.SphereGeometry(maxDistance, 16, 16);
+  let sphereMaterial = new THREE.MeshBasicMaterial({
+    color: 0x0000ff, // Синий цвет
+    opacity: 1,
+    transparent: true,
     wireframe: true,
   });
-  const rectangle = new THREE.Mesh(rectGeometry, rectMaterial);
-  rectangle.rotation.z = Math.PI / 2;
-  rectangle.position.set(coneHeight + 4, 0, 0); // Размещение в центре основания конуса
-  scene.add(rectangle);
+
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.set(-5, maxDistance / 2, 0);
+
+  scene.add(sphere);
+  return sphere;
 };
 
 export const createLightRayScene = () => {
@@ -132,7 +133,10 @@ export const createLightRayScene = () => {
 
   // Отрисовка моделей
   const coneHeight = createPyramidWithPoints(scene, rectWidth, rectHeight);
-  createRectangle(scene, coneHeight, rectWidth, rectHeight);
+  //createRectangle(scene, coneHeight, rectWidth, rectHeight);
+
+  const maxDistance = 2;
+  const sphere = createMaxSphere(scene, maxDistance);
 
   renderer.render(scene, camera);
 

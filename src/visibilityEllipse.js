@@ -10,7 +10,7 @@ const createCone = (scene, coneRadius, xRadius, yRadius, maxDistance) => {
       2. height (is maxDistance ?? from mudule 4)
       3. section amount
  */
-  let coneGeometry = new THREE.ConeGeometry(coneRadius, maxDistance, 32);
+  let coneGeometry = new THREE.ConeGeometry(coneRadius, maxDistance, 16);
   let coneMaterial = new THREE.MeshBasicMaterial({
     color: 0xff0000,
     wireframe: true,
@@ -40,7 +40,7 @@ const createMaxSphere = (scene, maxDistance) => {
   // 3. Количество сегментов по вертикали
   //const biggerRadius = Math.max(xRadius, yRadius);
   //const smallerRadius = Math.min(xRadius, yRadius);
-  let sphereGeometry = new THREE.SphereGeometry(maxDistance, 32, 32);
+  let sphereGeometry = new THREE.SphereGeometry(maxDistance, 16, 16);
   let sphereMaterial = new THREE.MeshBasicMaterial({
     color: 0x0000ff, // Синий цвет
     opacity: 1,
@@ -62,7 +62,7 @@ const createMinSphere = (scene, maxDistance, minDistance) => {
   // 3. Количество сегментов по вертикали
   //const biggerRadius = Math.max(xRadius, yRadius);
   //const smallerRadius = Math.min(xRadius, yRadius);
-  let sphereGeometry = new THREE.SphereGeometry(minDistance, 32, 32);
+  let sphereGeometry = new THREE.SphereGeometry(minDistance, 16, 16);
   let sphereMaterial = new THREE.MeshBasicMaterial({
     color: 0x0000ff, // Синий цвет
     opacity: 1,

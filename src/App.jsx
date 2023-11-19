@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import { createLightRayScene } from "./LightRay";
+import { createLightRayScene } from "./visibiltyRect";
 
 const App = () => {
   useEffect(() => {
