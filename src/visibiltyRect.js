@@ -2,16 +2,16 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { CSG } from "three-csg-ts";
 
-const createPyramidWithPoints = (scene, rectWidth, rectHeight) => {
+const createPyramidWithPoints = (scene, rectWidth, rectHeight, maxDistance) => {
   const smallerSide = Math.min(rectWidth, rectHeight);
   const biggerSide = Math.max(rectWidth, rectHeight);
 
   // Определение вершин пирамиды
-  const apex = new THREE.Vector3(0, 0, 0);
-  const base1 = new THREE.Vector3(-0.5 * rectWidth, -4, -0.5 * rectHeight);
-  const base2 = new THREE.Vector3(0.5 * rectWidth, -4, -0.5 * rectHeight);
-  const base3 = new THREE.Vector3(0.5 * rectWidth, -4, 0.5 * rectHeight);
-  const base4 = new THREE.Vector3(-0.5 * rectWidth, -4, 0.5 * rectHeight);
+  const apex = new THREE.Vector3(0, maxDistance, 0);
+  const base1 = new THREE.Vector3(-0.5 * rectWidth, 0, -0.5 * rectHeight);
+  const base2 = new THREE.Vector3(0.5 * rectWidth, 0, -0.5 * rectHeight);
+  const base3 = new THREE.Vector3(0.5 * rectWidth, 0, 0.5 * rectHeight);
+  const base4 = new THREE.Vector3(-0.5 * rectWidth, 0, 0.5 * rectHeight);
 
   // Создание геометрии точек (BufferGeometry)
   const pyramidGeometry = new THREE.BufferGeometry();
@@ -80,12 +80,32 @@ const createPyramidWithPoints = (scene, rectWidth, rectHeight) => {
 
   // Создание меша (пирамиды) из геометрии и материала
   const pyramidMesh = new THREE.Mesh(pyramidGeometry, meshMaterial);
-  pyramidMesh.rotation.z = Math.PI / 2;
+  //pyramidMesh.rotation.z = Math.PI / 2;
   // Добавление меша на сцену
   scene.add(pyramidMesh);
+  console.log(`pyramid ${apex.y}`);
 
-  return apex.y;
+  return pyramidMesh;
 };
+
+const createRectangle = (scene, coneHeight, rectWidth, rectHeight) => {
+    /* Rectangle is Smax
+      Parameters of THREE.BoxGeometry(...): 
+        1. width 
+        2. depth
+        3. height
+    */
+  
+    const rectGeometry = new THREE.BoxGeometry(rectWidth, 0, rectHeight); // Параметры: ширина, глубина, высота
+    const rectMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      wireframe: true,
+    });
+    const rectangle = new THREE.Mesh(rectGeometry, rectMaterial);
+    //rectangle.rotation.z = Math.PI / 2;
+    rectangle.position.set(coneHeight + 4, 0, 0); // Размещение в центре основания конуса
+    scene.add(rectangle);
+  };
 
 const createMaxSphere = (scene, maxDistance) => {
   // Параметры THREE.SphereGeometry:
@@ -103,24 +123,25 @@ const createMaxSphere = (scene, maxDistance) => {
   });
 
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-  sphere.position.set(0, maxDistance / 8, 0);
+  sphere.position.set(0, maxDistance, 0);
 
   scene.add(sphere);
+  console.log(`sphere ${sphere.position.y}`);
   return sphere;
 };
 
-const createIntersection = (scene, pyramid, sphere, rectangle) => {
-    scene.remove(sphere);
+const createIntersection = (scene, pyramid, sphere) => {
+    //scene.remove(sphere);
     const interRes = CSG.intersect(pyramid, sphere);
 
-    
+
     const material = new THREE.MeshBasicMaterial({
         color: 0x964bf4,
         opacity: 1,
         wireframe: true,
       });
       interRes.material = material;
-      interRes.position.x = 2;
+      interRes.position.x = 5;
       scene.add(interRes);
       return interRes;
 }
@@ -146,13 +167,19 @@ export const createLightRayScene = () => {
   // Размеры прямоугольника эллипса
   const rectWidth = 1;
   const rectHeight = 2;
+  const maxDistance = 8;
 
   // Отрисовка моделей
-  const coneHeight = createPyramidWithPoints(scene, rectWidth, rectHeight);
+  let pyramid = createPyramidWithPoints(scene, rectWidth, rectHeight, maxDistance);
   //createRectangle(scene, coneHeight, rectWidth, rectHeight);
-
-  const maxDistance = 2;
   const sphere = createMaxSphere(scene, maxDistance);
+
+  pyramid.updateMatrix();
+  sphere.updateMatrix();
+
+  //let interModel1 = createIntersection(scene, pyramid, sphere);
+  
+
 
   renderer.render(scene, camera);
 
