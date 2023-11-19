@@ -103,11 +103,27 @@ const createMaxSphere = (scene, maxDistance) => {
   });
 
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-  sphere.position.set(-5, maxDistance / 2, 0);
+  sphere.position.set(0, maxDistance / 8, 0);
 
   scene.add(sphere);
   return sphere;
 };
+
+const createIntersection = (scene, pyramid, sphere, rectangle) => {
+    scene.remove(sphere);
+    const interRes = CSG.intersect(pyramid, sphere);
+
+    
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x964bf4,
+        opacity: 1,
+        wireframe: true,
+      });
+      interRes.material = material;
+      interRes.position.x = 2;
+      scene.add(interRes);
+      return interRes;
+}
 
 export const createLightRayScene = () => {
   // Создание сцены
