@@ -3,89 +3,26 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { CSG } from "three-csg-ts";
 
 const createPyramidWithPoints = (scene, rectWidth, rectHeight, maxDistance) => {
-  const smallerSide = Math.min(rectWidth, rectHeight);
-  const biggerSide = Math.max(rectWidth, rectHeight);
+    const smallerSide = Math.min(rectWidth, rectHeight);
+    const biggerSide = Math.max(rectWidth, rectHeight);
 
-  // Определение вершин пирамиды
-  const apex = new THREE.Vector3(0, maxDistance, 0);
-  const base1 = new THREE.Vector3(-0.5 * rectWidth, 0, -0.5 * rectHeight);
-  const base2 = new THREE.Vector3(0.5 * rectWidth, 0, -0.5 * rectHeight);
-  const base3 = new THREE.Vector3(0.5 * rectWidth, 0, 0.5 * rectHeight);
-  const base4 = new THREE.Vector3(-0.5 * rectWidth, 0, 0.5 * rectHeight);
+    const pyramidGeometry = new THREE.ConeGeometry(
+        0.5 * rectWidth,    // радиус вершины
+        maxDistance,        // высота пирамиды
+        4                    // количество сегментов
+    );
 
-  // Создание геометрии точек (BufferGeometry)
-  const pyramidGeometry = new THREE.BufferGeometry();
+    const pyramidMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff0000, // Красный цвет
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide,
+    });
 
-  // Координаты вершин пирамиды
-  const vertices = new Float32Array([
-    apex.x,
-    apex.y,
-    apex.z,
-    base1.x,
-    base1.y,
-    base1.z,
-    base2.x,
-    base2.y,
-    base2.z,
-    base3.x,
-    base3.y,
-    base3.z,
-    base4.x,
-    base4.y,
-    base4.z,
-  ]);
+    const pyramidMesh = new THREE.Mesh(pyramidGeometry, pyramidMaterial);
+    scene.add(pyramidMesh);
 
-  // Добавление атрибута вершинам
-  pyramidGeometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(vertices, 3)
-  );
-
-  // Определение индексов для соединения вершин
-  const indices = new Uint16Array([
-    0,
-    1,
-    2,
-    0,
-    2,
-    3,
-    0,
-    3,
-    4,
-    0,
-    4,
-    1, // Основание
-    0,
-    1,
-    1,
-    2,
-    2,
-    3,
-    3,
-    4,
-    4,
-    0, // Боковые грани
-  ]);
-
-  // Добавление атрибута индексов
-  pyramidGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
-
-  // Создание материала для меша с прозрачностью и красным цветом
-  const meshMaterial = new THREE.MeshBasicMaterial({
-    color: 0xff0000, // Красный цвет
-    transparent: true,
-    opacity: 0.7,
-    side: THREE.DoubleSide, // Двустороннее отображение граней
-  });
-
-  // Создание меша (пирамиды) из геометрии и материала
-  const pyramidMesh = new THREE.Mesh(pyramidGeometry, meshMaterial);
-  //pyramidMesh.rotation.z = Math.PI / 2;
-  // Добавление меша на сцену
-  scene.add(pyramidMesh);
-  console.log(`pyramid ${apex.y}`);
-
-  return pyramidMesh;
+    return pyramidMesh;
 };
 
 const createRectangle = (scene, coneHeight, rectWidth, rectHeight) => {
@@ -177,7 +114,7 @@ export const createLightRayScene = () => {
   pyramid.updateMatrix();
   sphere.updateMatrix();
 
-  //let interModel1 = createIntersection(scene, pyramid, sphere);
+  let interModel1 = createIntersection(scene, pyramid, sphere);
   
 
 
