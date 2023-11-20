@@ -133,7 +133,7 @@ const createMinIntersection = (scene, cone, sphere) => {
   //scene.remove(sphere);
   const interRes = CSG.subtract(cone, sphere);
 
-  const material = new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshNormalMaterial({
     color: 0x964bf4,
     opacity: 1,
     wireframe: true,

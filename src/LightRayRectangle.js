@@ -91,6 +91,8 @@ const createPyramid = (scene, rectWidth, rectHeight, maxDistance) => {
 };
 
 const createIntersection = (scene, pyramid, sphere, actionString) => {
+  scene.remove(pyramid);
+  scene.remove(sphere);
   // Convert objects to CSG
   const sphereCSG = CSG.fromMesh(sphere);
   const pyramidCSG = CSG.fromMesh(pyramid);
@@ -105,7 +107,7 @@ const createIntersection = (scene, pyramid, sphere, actionString) => {
 
   // Convert the result back to Three.js Mesh
   const resultMesh = CSG.toMesh(action, sphere.matrix);
-  resultMesh.material = new THREE.MeshNormalMaterial({ wireframe: false });
+  resultMesh.material = new THREE.MeshNormalMaterial({ wireframe: true });
 
   scene.add(resultMesh);
   return resultMesh;
@@ -138,7 +140,7 @@ export const createLightRayScene = () => {
   const maxDistance = 8;
 
   // Отрисовка моделей
-  createRectangle(scene, maxDistance, rectWidth, rectHeight);
+  //createRectangle(scene, maxDistance, rectWidth, rectHeight);
   const maxSphere = createSphere(scene, maxDistance, maxDistance);
   const pyramid = createPyramid(scene, rectWidth, rectHeight, maxDistance);
 
@@ -151,15 +153,18 @@ export const createLightRayScene = () => {
     maxSphere,
     "intersect"
   );
-  interModel1.position.x = 5;
+  //interModel1.position.x = 5;
   const minSphere = createSphere(scene, minDistance, maxDistance);
-  minSphere.position.x = 5;
+  //minSphere.position.x = 5;
 
   minSphere.updateMatrix();
   interModel1.updateMatrix();
 
   const model = createIntersection(scene, interModel1, minSphere, "subtract");
-  model.position.x = 10;
+  model.position.y = 0;
+  model.rotation.z = Math.PI / 2;
+
+  model.position.x = -5;
 
   renderer.render(scene, camera);
 

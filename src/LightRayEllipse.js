@@ -65,9 +65,7 @@ const createIntersection = (scene, cone, sphere, choice) => {
     interRes = CSG.subtract(cone, sphere);
   }
 
-  const material = new THREE.MeshBasicMaterial({
-    color: 0x964bf4,
-    opacity: 1,
+  const material = new THREE.MeshNormalMaterial({
     wireframe: true,
   });
   interRes.material = material;
@@ -118,6 +116,7 @@ export const createLightRayScene = () => {
   scene.add(minSphere);
 
   let model = createIntersection(scene, interModel1, minSphere, "subtract");
+
   model.rotation.z = Math.PI / 2;
 
   renderer.render(scene, camera);
