@@ -43,22 +43,36 @@ export const createLightRayScene = () => {
     console.log(`Point ${i / 3}: x=${x}, y=${y}, z=${z}`);
   }
 
-  // changing position of points [Sphere]
+  const offsetVector = new THREE.Vector3(1, 2, 0);
+
+  // Изменение расстояния точек от центра с использованием вектора
   for (let index = 0; index < 16; index++) {
-    positions[index*3 + 1] = 2;
+    const vertex = new THREE.Vector3().fromArray(positions, index * 3);
+    vertex.add(offsetVector);
+    vertex.toArray(positions, index * 3);
   }
 
-  for (let index = 16; index < 34; index++) {
-    positions[index*3 + 1] = 3;
-  }
+  // Укажите Three.js, что буфер атрибутов был изменен
+  sphereGeometry.getAttribute('position').needsUpdate = true;
 
-  for (let index = 34; index < 51; index++) {
-    positions[index*3 + 1] = 4;
-  }
+  // changing position of points [Sphere]
+  // for (let index = 0; index < 16; index++) {
+  //   positions[index*3] += 2;
+  //   positions[index*3 + 1] += 2;
+  //   positions[index*3 + 2] += 2;
+  // }
 
-  for (let index = 51; index < 68; index++) {
-    positions[index*3 + 1] = 5;
-  }
+  // for (let index = 16; index < 34; index++) {
+  //   positions[index*3 + 1] = 3;
+  // }
+
+  // for (let index = 34; index < 51; index++) {
+  //   positions[index*3 + 1] = 4;
+  // }
+
+  // for (let index = 51; index < 68; index++) {
+  //   positions[index*3 + 1] = 5;
+  // }
 
   
   // Добавление меша на сцену
