@@ -19,20 +19,23 @@ export const createLightRayScene = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+  const axis = new THREE.AxesHelper(3);
+
   // Создание BufferGeometry для сферы
   const sphereGeometry = new THREE.SphereGeometry(2, 16, 16);
 
   // Создание материала
-  const material = new THREE.MeshNormalMaterial({
-    //color: 'red',
-    wireframe: !true,
+  const material = new THREE.MeshBasicMaterial({
+    vertexColors: false,
+    color: "red",
+    wireframe: true,
   });
 
   // Создание Mesh
   const mesh = new THREE.Mesh(sphereGeometry, material);
 
   // Получение координат вершин сферы
-  const positions = sphereGeometry.getAttribute('position').array;
+  const positions = sphereGeometry.getAttribute("position").array;
 
   // Вывод координат всех точек сферы
   console.log("Coordinates of all points on the sphere:");
@@ -53,7 +56,7 @@ export const createLightRayScene = () => {
   }
 
   // Укажите Three.js, что буфер атрибутов был изменен
-  sphereGeometry.getAttribute('position').needsUpdate = true;
+  sphereGeometry.getAttribute("position").needsUpdate = true;
 
   // changing position of points [Sphere]
   // for (let index = 0; index < 16; index++) {
@@ -74,8 +77,8 @@ export const createLightRayScene = () => {
   //   positions[index*3 + 1] = 5;
   // }
 
-  
   // Добавление меша на сцену
+  scene.add(axis);
   scene.add(mesh);
 
   // Рендеринг сцены
