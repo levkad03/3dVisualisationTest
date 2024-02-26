@@ -86,23 +86,23 @@ export const createLightRayScene = () => {
   sphereGeometry.getAttribute("position").needsUpdate = true;
 
   // changing position of points [Sphere]
-  for (let index = 0; index < 16; index++) {
-    positionsOffset[index*3] += 2;
-    positionsOffset[index*3 + 1] += 2;
-    positionsOffset[index*3 + 2] += 2;
-  }
+  // for (let index = 0; index < 16; index++) {
+  //   positionsOffset[index*3] += 2;
+  //   positionsOffset[index*3 + 1] += 2;
+  //   positionsOffset[index*3 + 2] += 2;
+  // }
 
-  for (let index = 16; index < 34; index++) {
-    positionsOffset[index*3 + 1] = 3;
-  }
+  // for (let index = 16; index < 34; index++) {
+  //   positionsOffset[index*3 + 1] = 3;
+  // }
 
-  for (let index = 34; index < 51; index++) {
-    positionsOffset[index*3 + 1] = 4;
-  }
+  // for (let index = 34; index < 51; index++) {
+  //   positionsOffset[index*3 + 1] = 4;
+  // }
 
-  for (let index = 51; index < 68; index++) {
-    positionsOffset[index*3 + 1] = 5;
-  }
+  // for (let index = 51; index < 68; index++) {
+  //   positionsOffset[index*3 + 1] = 5;
+  // }
 
   // Добавление меша на сцену
   scene.add(axis);
