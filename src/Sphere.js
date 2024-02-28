@@ -19,7 +19,7 @@ export const createLightRayScene = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  const axis = new THREE.AxesHelper(3);
+  const axis = new THREE.AxesHelper(5);
 
   // Создание BufferGeometry для сферы
   const sphereGeometry = new THREE.SphereGeometry(2, 16, 16);
