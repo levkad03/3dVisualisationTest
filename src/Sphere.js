@@ -21,9 +21,14 @@ export const createLightRayScene = () => {
 
   const axis = new THREE.AxesHelper(5);
 
+  const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
+  const tableLeftSide = new Float32Array([10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2, -1]);
+  const tableMean = new Float32Array([10, 9.9, 7.9, 6.5, 3.5, 1, -3, -6.75, -10, -11.5, -7.5, -5.5, -5.75, -7.5, -9.5, -7.5, -3.75, -1.75, -1]);
+  const tableMeanCopy = tableMean;
+
   // Создание BufferGeometry для сферы
   const sphereGeometry = new THREE.SphereGeometry(2, 16, 16);
-  
+
   // getting number of points
   const count = sphereGeometry.attributes.position.count;
   // Setting color attribute to the sphere
@@ -36,7 +41,7 @@ export const createLightRayScene = () => {
 
   const positions = sphereGeometry.attributes.position;
   const sphereColors = sphereGeometry.attributes.color;
-  
+
   // setting color
   for (let i = 0; i < count; i++) {
     color.setRGB(1, 0.8 - (positions.getY(i) / 2 + 1) / 2, 0);
