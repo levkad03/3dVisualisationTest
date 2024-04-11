@@ -2,21 +2,27 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import * as math from "mathjs";
 
-const changePointPosition = (points, wSegments, segment, pointIndex, delta) => {
+const changePointPosition = (
+  points,
+  wSegments,
+  segment,
+  meridianIndex,
+  delta
+) => {
   delta.applyAxisAngle(
     new THREE.Vector3(0, 1, 0),
-    (pointIndex * 2 * Math.PI) / wSegments
+    (meridianIndex * 2 * Math.PI) / wSegments
   );
 
-  if (pointIndex == 0) {
+  if (meridianIndex == 0) {
     points[(segment * (wSegments + 1) + wSegments) * 3] += delta.x;
     points[(segment * (wSegments + 1) + wSegments) * 3 + 1] += delta.y;
     points[(segment * (wSegments + 1) + wSegments) * 3 + 2] += delta.z;
   }
 
-  points[(segment * (wSegments + 1) + pointIndex) * 3] += delta.x;
-  points[(segment * (wSegments + 1) + pointIndex) * 3 + 1] += delta.y;
-  points[(segment * (wSegments + 1) + pointIndex) * 3 + 2] += delta.z;
+  points[(segment * (wSegments + 1) + meridianIndex) * 3] += delta.x;
+  points[(segment * (wSegments + 1) + meridianIndex) * 3 + 1] += delta.y;
+  points[(segment * (wSegments + 1) + meridianIndex) * 3 + 2] += delta.z;
 };
 
 const polarToCartesian = (radius, angleDegrees) => {
@@ -215,52 +221,145 @@ function evaluateBezier(points, n) {
   const cn = curves.length;
   const result = [];
   for (let i = 0; i < n - 1; i++) {
-    const t = i/(n-1); //Перевод индекса в размерность [0,1]
+    const t = i / (n - 1); //Перевод индекса в размерность [0,1]
     const ct = Math.max(Math.min(t * cn, cn - 0.000001), 0); //Ограничение коэффициента от 0 до cn
     const ci = Math.floor(ct);
 
-    result.push(curves[ci](ct-ci));
+    result.push(curves[ci](ct - ci));
   }
-  result.push(points[points.length-1]);
+  result.push(points[points.length - 1]);
+  // console.log(`Result ${result.length}`);
   return result;
 }
 
-const createShapeFromData = (data, subdivisions = 1, discreteCoefficient=10) => {
+function evaluateCosineSine(points, n) {
+  const result = [];
+  const numPoints = points.length - 1;
 
+  for (let i = 0; i < n - 1; i++) {
+    const t = i / (n - 1); //Перевод индекса в размерность [0,1]
+    const pt = Math.max(Math.min(t * numPoints, numPoints - 0.000001), 0); //Ограничение коэффициента от 0 до cn
+    const pi = Math.floor(pt);
+
+    const point1 = points[pi];
+    const point2 = points[pi + 1];
+
+    const phi = ((pt - pi) * Math.PI) / 2;
+    const cosSquared = Math.cos(phi) ** 2;
+    const sinSquared = Math.sin(phi) ** 2;
+
+    const x = point1[0] * cosSquared + point2[0] * sinSquared;
+    const y = point1[1] * cosSquared + point2[1] * sinSquared;
+    result.push([x, y]);
+  }
+  result.push(points[points.length - 1]);
+
+  return result;
+}
+
+function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
   const widthSegments = data.length * Math.pow(2, subdivisions);
-  const heightSegments = data[0].length - 1;
-  const heightSmooth = Math.floor(180/discreteCoefficient)+1;
-  console.log(heightSmooth);
+  const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
   const geometry = new THREE.SphereGeometry(
     0,
     widthSegments,
-    heightSmooth
+    heightSegments - 1
   );
-  const sidesOffset = interpolateOffsets(data, subdivisions);
-  console.log(sidesOffset);
 
   const positionsOffset = geometry.getAttribute("position").array;
 
-  // apply data offset
-  for (let pointIndex = 0; pointIndex < widthSegments; pointIndex++) {
+  /*
+  В данном фрагменте кода функция проходится по каждой меридиане (или широтной линии)
+  и создает последовательность точек, представляющих данные для данной линии.
+  Затем она использует функцию evaluateBezier для создания улучшенной кривой,
+  представляющей данные для этой линии, и сохраняет результат в новом массиве.
+
+  Затем она проходится по каждой точке в новом массиве и сохраняет координату x в новый массив. 
+  Этот новый массив будет использоваться для создания 3D-сферы.
+  */
+  for (let meridianIndex = 0; meridianIndex < data.length; meridianIndex++) {
+    let tempData = [];
+    for (let index = 0; index < data[meridianIndex].length; index++) {
+      tempData.push([data[meridianIndex][index], 0]);
+    }
+    const interpolatedPoints = evaluateBezier(tempData, heightSegments);
+    // const interpolatedPoints = evaluateCosineSine(tempData, heightSmooth);
+    tempData = [];
+    for (let index = 0; index < interpolatedPoints.length; index++) {
+      tempData.push(interpolatedPoints[index][0]);
+    }
+    data[meridianIndex] = tempData;
+  }
+
+  /*
+  Проходим по количеству параллелей
+  собираем точки меридиана для i-той параллели
+  интерполируем параллель, получаем больше точек
+  таким образом получаем массив интерполированных параллелей
+  */
+
+  const interpolatedData = [];
+
+  for (let index = 0; index < data[0].length; index++) {
+    const parallelPoints = [];
+    for (let meridianIndex = 0; meridianIndex < data.length; meridianIndex++) {
+      parallelPoints.push(data[meridianIndex][index]);
+    }
+    parallelPoints.push(parallelPoints[0]);
+    let tempData = [];
+    for (let i = 0; i < parallelPoints.length; i++) {
+      tempData.push([parallelPoints[i], 0]);
+    }
+    console.log("Temp data", tempData);
+    const interpolatedPoints = evaluateBezier(tempData, widthSegments);
+    // const interpolatedPoints = evaluateCosineSine(tempData, widthSegments);
+    console.log("Interpolated points", interpolatedPoints);
+    tempData = [];
+    for (let i = 0; i < interpolatedPoints.length; i++) {
+      tempData.push(interpolatedPoints[i][0]);
+    }
+    interpolatedData.push(tempData);
+  }
+
+  /*
+  Проходим по количеству меридиан
+  Переводим каждую меридиану в полярные координаты
+  после чего переводим в декартовые
+  */
+
+  const decData = [];
+
+  for (
+    let meridianIndex = 0;
+    meridianIndex < interpolatedData[0].length;
+    meridianIndex++
+  ) {
     let polarPoints = Array.from(
-      { length: sidesOffset[pointIndex].length },
+      { length: interpolatedData.length },
       (_, i) => {
-        return [sidesOffset[pointIndex][i], (180 / heightSegments) * i + 90];
+        return [
+          interpolatedData[i][meridianIndex],
+          (180 / heightSegments) * i + 90,
+        ];
       }
     );
-    const decPoints = polarPoints.map((value, index) => {
-      return polarToCartesian(value[0], value[1]);
-    });
-    const interpolatedPoints = evaluateBezier(
-      decPoints,
-      heightSmooth
+    decData.push(
+      polarPoints.map((value, _) => {
+        return polarToCartesian(value[0], value[1]);
+      })
     );
+  }
 
-    for (let index = 0; index < interpolatedPoints.length; index++) {
+  /*
+  Записываем декартовые координаты в delta
+  смещаем точки относительно этих координат
+  */
+  // apply data offset
+  for (let meridianIndex = 0; meridianIndex < widthSegments; meridianIndex++) {
+    for (let index = 0; index < decData[meridianIndex].length; index++) {
       const delta = new THREE.Vector3(
-        interpolatedPoints[index][0],
-        interpolatedPoints[index][1],
+        decData[meridianIndex][index][0],
+        decData[meridianIndex][index][1],
         0
       );
 
@@ -268,14 +367,14 @@ const createShapeFromData = (data, subdivisions = 1, discreteCoefficient=10) => 
         positionsOffset,
         widthSegments,
         index,
-        pointIndex,
+        meridianIndex,
         delta
       );
     }
   }
 
   return geometry;
-};
+}
 
 export const createLightRayScene = () => {
   // Создание сцены
@@ -295,35 +394,63 @@ export const createLightRayScene = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  const axis = new THREE.AxesHelper(50);
+  const axis = new THREE.AxesHelper(80);
 
   const n = 10;
-  const baseSphereRadius = 20;
+  const baseSphereRadius = 70; // 20
   // const tableLeftSide = [];
   // const tableRightSide = [];
   // for (let i = 0; i < n; i++) {
   //   tableLeftSide.push(testPolarFunction((i * Math.PI) / n + Math.PI));
   //   tableRightSide.push(testPolarFunction((-i * Math.PI) / n + Math.PI));
   // }
-  const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
-  const tableLeftSide = new Float32Array([10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2, -1]);
+  const tableRightSide = new Float32Array([
+    0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
+    -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
+    -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
+  ]);
+  const tableLeftSide = new Float32Array([
+    0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
+    -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
+    -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
+  ]);
+
+  const tableTop = new Float32Array([
+    0, -0.05, -0.8, -2.5, -5, -7.6, -11.3, -17, -26, -23, -22, -22, -21.5,
+    -22.5, -22, -25, -24.5, -23.5, -24, -22.5, -23, -22, -24, -26, -22, -25,
+    -29, -34, -28.4, -28.4, -27.5, -31, -26, -24, -20, -22, -26,
+  ]);
+
+  const tableBottom = new Float32Array([
+    0, -0.8, -2, -4, -6.7, -10, -14.5, -20, -21.6, -24, -24, -23.3, -24, -23,
+    -23.5, -23.6, -30, -30.8, -34.5, -32.5, -27.5, -28.3, -31.3, -33, -30, -26,
+    -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
+  ]);
+
+  console.log(tableLeftSide.length);
+  console.log(tableRightSide.length);
+  console.log(tableTop.length);
+  console.log(tableBottom.length);
+  // const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
+  // const tableLeftSide = new Float32Array([
+  //   10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2,
+  //   -1,
+  // ]);
   for (let i = 0; i < tableRightSide.length; i++) {
     tableRightSide[i] += baseSphereRadius;
     tableLeftSide[i] += baseSphereRadius;
+    tableTop[i] += baseSphereRadius;
+    tableBottom[i] += baseSphereRadius;
   }
-  const data = [tableRightSide, tableLeftSide];
+  const data = [tableRightSide, tableTop, tableLeftSide, tableBottom];
 
   // Создание BufferGeometry для сферы
-  const discreteCoefficient = 4;
+  const discreteCoefficient = 2;
   const subdivisions = 4;
   // const gradient = ["#ffd700", "#0057b7"];
   const gradient = ["#ff0000", "#00ff00", "#0000ff"];
   // const gradient = ["#ff0000"];
-  const geometry = createShapeFromData(
-    data,
-    subdivisions,
-    discreteCoefficient
-  );
+  const geometry = createShapeFromData(data, subdivisions, discreteCoefficient);
   // paintGradient(geometry, gradient, [0, undefined]);
   // paintGradient(geometry, gradient, [0, 6]);
   // paintGradient(geometry, gradient, [0, 0]);
