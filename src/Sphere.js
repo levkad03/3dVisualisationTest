@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import * as math from "mathjs";
 
+// const evaluateFlag = "bezier";
+const evaluateFlag = "cosine-sine";
+
 const changePointPosition = (
   points,
   wSegments,
@@ -257,70 +260,53 @@ function evaluateCosineSine(points, n) {
   return result;
 }
 
-function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
-  const widthSegments = data.length * Math.pow(2, subdivisions);
-  const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
-  const geometry = new THREE.SphereGeometry(
-    0,
-    widthSegments,
-    heightSegments - 1
-  );
+const evaluate = (data, segments) => {
+  if (evaluateFlag === "cosine-sine") {
+    return evaluateCosineSine(data, segments);
+  } else if (evaluateFlag === "bezier") {
+    return evaluateBezier(data, segments);
+  }
+}
 
-  const positionsOffset = geometry.getAttribute("position").array;
+const transposeMatrix = (matrix) => {
+  const result = [];
 
-  /*
-  В данном фрагменте кода функция проходится по каждой меридиане (или широтной линии)
-  и создает последовательность точек, представляющих данные для данной линии.
-  Затем она использует функцию evaluateBezier для создания улучшенной кривой,
-  представляющей данные для этой линии, и сохраняет результат в новом массиве.
-
-  Затем она проходится по каждой точке в новом массиве и сохраняет координату x в новый массив. 
-  Этот новый массив будет использоваться для создания 3D-сферы.
-  */
-  for (let meridianIndex = 0; meridianIndex < data.length; meridianIndex++) {
-    let tempData = [];
-    for (let index = 0; index < data[meridianIndex].length; index++) {
-      tempData.push([data[meridianIndex][index], 0]);
+  for (let j = 0; j < matrix[0].length; j++) {
+    const temp = [];
+    for (let i = 0; i < matrix.length; i++) {
+      temp.push(matrix[i][j]);
     }
-    const interpolatedPoints = evaluateBezier(tempData, heightSegments);
-    // const interpolatedPoints = evaluateCosineSine(tempData, heightSmooth);
+    result.push(temp);
+  }
+  return result;
+}
+
+const interpolateMatrixRows = (data, widthSegments) => {
+  /*
+  Проходим по количеству строк
+  собираем точки столбца для i-той строки
+  интерполируем строку, получаем больше точек
+  таким образом получаем массив интерполированных строк
+  */
+
+  const interpolatedMeridians = [];
+  for (let i = 0; i < data.length; i++) {
+    let tempData = [];
+    for (let j = 0; j < data[i].length; j++) {
+      tempData.push([data[i][j], 0]);
+    }
+
+    const interpolatedPoints = evaluate(tempData, widthSegments);
     tempData = [];
     for (let index = 0; index < interpolatedPoints.length; index++) {
       tempData.push(interpolatedPoints[index][0]);
     }
-    data[meridianIndex] = tempData;
+    interpolatedMeridians.push(tempData);
   }
+  return interpolatedMeridians;
+}
 
-  /*
-  Проходим по количеству параллелей
-  собираем точки меридиана для i-той параллели
-  интерполируем параллель, получаем больше точек
-  таким образом получаем массив интерполированных параллелей
-  */
-
-  const interpolatedData = [];
-
-  for (let index = 0; index < data[0].length; index++) {
-    const parallelPoints = [];
-    for (let meridianIndex = 0; meridianIndex < data.length; meridianIndex++) {
-      parallelPoints.push(data[meridianIndex][index]);
-    }
-    parallelPoints.push(parallelPoints[0]);
-    let tempData = [];
-    for (let i = 0; i < parallelPoints.length; i++) {
-      tempData.push([parallelPoints[i], 0]);
-    }
-    console.log("Temp data", tempData);
-    const interpolatedPoints = evaluateBezier(tempData, widthSegments);
-    // const interpolatedPoints = evaluateCosineSine(tempData, widthSegments);
-    console.log("Interpolated points", interpolatedPoints);
-    tempData = [];
-    for (let i = 0; i < interpolatedPoints.length; i++) {
-      tempData.push(interpolatedPoints[i][0]);
-    }
-    interpolatedData.push(tempData);
-  }
-
+const offsetsToPoints = (data, heightSegments) => {
   /*
   Проходим по количеству меридиан
   Переводим каждую меридиану в полярные координаты
@@ -331,14 +317,14 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
 
   for (
     let meridianIndex = 0;
-    meridianIndex < interpolatedData[0].length;
+    meridianIndex < data.length;
     meridianIndex++
   ) {
     let polarPoints = Array.from(
-      { length: interpolatedData.length },
+      { length: data[0].length },
       (_, i) => {
         return [
-          interpolatedData[i][meridianIndex],
+          data[meridianIndex][i],
           (180 / heightSegments) * i + 90,
         ];
       }
@@ -349,7 +335,10 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
       })
     );
   }
+  return decData;
+}
 
+const transformGeometry = (decData, positionsOffset, widthSegments) => {
   /*
   Записываем декартовые координаты в delta
   смещаем точки относительно этих координат
@@ -372,6 +361,29 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
       );
     }
   }
+}
+
+function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
+  const widthSegments = data.length * Math.pow(2, subdivisions);
+  const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
+  const geometry = new THREE.SphereGeometry(
+    0,
+    widthSegments,
+    heightSegments - 1
+  );
+  const positionsOffset = geometry.getAttribute("position").array;
+
+  // Добавляем первую меридиану в конец, чтобы конец интерполировался с началом
+  data.push(data[0]);
+  
+
+  data = interpolateMatrixRows(data, heightSegments);
+
+  const interpolatedData = transposeMatrix(interpolateMatrixRows(transposeMatrix(data), widthSegments));
+
+  const decData = offsetsToPoints(interpolatedData, heightSegments);
+
+  transformGeometry(decData, positionsOffset, widthSegments);
 
   return geometry;
 }
