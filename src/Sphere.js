@@ -388,6 +388,15 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
   return geometry;
 }
 
+const logPolarToPolar = (table) => {
+  const polarList = [];
+  for (let i=0; i<table.length; i++) {
+    polarList.push(Math.exp(table[i]));
+  }
+  return polarList;
+}
+
+
 export const createLightRayScene = () => {
   // Создание сцены
   const scene = new THREE.Scene();
@@ -409,45 +418,50 @@ export const createLightRayScene = () => {
   const axis = new THREE.AxesHelper(80);
 
   const n = 10;
-  const baseSphereRadius = 70; // 20
+  
   // const tableLeftSide = [];
   // const tableRightSide = [];
   // for (let i = 0; i < n; i++) {
   //   tableLeftSide.push(testPolarFunction((i * Math.PI) / n + Math.PI));
   //   tableRightSide.push(testPolarFunction((-i * Math.PI) / n + Math.PI));
   // }
-  const tableRightSide = new Float32Array([
+  let tableRightSide = new Float32Array([
     0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
     -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
     -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
   ]);
-  const tableLeftSide = new Float32Array([
+  let tableLeftSide = new Float32Array([
     0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
     -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
     -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
   ]);
 
-  const tableTop = new Float32Array([
+  let tableTop = new Float32Array([
     0, -0.05, -0.8, -2.5, -5, -7.6, -11.3, -17, -26, -23, -22, -22, -21.5,
     -22.5, -22, -25, -24.5, -23.5, -24, -22.5, -23, -22, -24, -26, -22, -25,
     -29, -34, -28.4, -28.4, -27.5, -31, -26, -24, -20, -22, -26,
   ]);
 
-  const tableBottom = new Float32Array([
+  let tableBottom = new Float32Array([
     0, -0.8, -2, -4, -6.7, -10, -14.5, -20, -21.6, -24, -24, -23.3, -24, -23,
     -23.5, -23.6, -30, -30.8, -34.5, -32.5, -27.5, -28.3, -31.3, -33, -30, -26,
     -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
   ]);
 
-  console.log(tableLeftSide.length);
-  console.log(tableRightSide.length);
-  console.log(tableTop.length);
-  console.log(tableBottom.length);
+  // tableRightSide = logPolarToPolar(tableRightSide);
+  // tableLeftSide = logPolarToPolar(tableLeftSide);
+  // tableTop = logPolarToPolar(tableTop);
+  // tableBottom = logPolarToPolar(tableBottom);
+
+
   // const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
   // const tableLeftSide = new Float32Array([
   //   10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2,
   //   -1,
   // ]);
+
+
+  const baseSphereRadius = Math.abs(Math.min(0, ...tableRightSide, ...tableLeftSide, ...tableTop, ...tableBottom)); 
   for (let i = 0; i < tableRightSide.length; i++) {
     tableRightSide[i] += baseSphereRadius;
     tableLeftSide[i] += baseSphereRadius;
