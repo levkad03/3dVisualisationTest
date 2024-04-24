@@ -426,6 +426,12 @@ const calculateGeometryArea = (geometry) => {
   return area;
 }
 
+const calculateScaleFactor = (sensitivity, power, area) => {
+  const maxArea = sensitivity/power;
+  console.log(`max area: ${maxArea}`);
+  return maxArea/area;
+}
+
 
 export const createLightRayScene = () => {
   // Создание сцены
@@ -478,6 +484,9 @@ export const createLightRayScene = () => {
     -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
   ]);
 
+  const sensitivity = 0.015;
+  const power = 1;
+
 
   // const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
   // const tableLeftSide = new Float32Array([
@@ -495,7 +504,10 @@ export const createLightRayScene = () => {
   const geometry = createShapeFromData(data, subdivisions, discreteCoefficient, false);
   
   const area = calculateGeometryArea(geometry);
-  console.log(area);
+  console.log(`geometry area: ${area}`);
+  
+  const scaleFactor = calculateScaleFactor(sensitivity, power, area);
+  console.log(`scale factor: ${scaleFactor}`);
   // paintGradient(geometry, gradient, [0, undefined]);
   // paintGradient(geometry, gradient, [0, 6]);
   // paintGradient(geometry, gradient, [0, 0]);
