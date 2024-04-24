@@ -105,39 +105,6 @@ const paintGradient = (
   }
 };
 
-const foundMeanOfLists = (l1, l2) => {
-  let result = [];
-  for (let i = 0; i < l1.length; i++) {
-    result.push((l1[i] + l2[i]) / 2);
-  }
-  return new Float32Array(result);
-};
-
-const interpolateOffsets = (lists, subdivisions) => {
-  if (subdivisions <= 0) {
-    return lists;
-  }
-
-  let result = [];
-  for (let sub = 0; sub < subdivisions; sub++) {
-    result = [];
-
-    for (let i = 0; i < lists.length - 1; i++) {
-      result.push(lists[i]);
-      result.push(foundMeanOfLists(lists[i], lists[i + 1]));
-    }
-
-    if (lists.length !== 0) {
-      result.push(lists[lists.length - 1]);
-      result.push(foundMeanOfLists(lists[0], lists[lists.length - 1]));
-    }
-
-    lists = result;
-  }
-
-  return result;
-};
-
 const testPolarFunction = (phi) => {
   // return 20*(Math.cos(phi+Math.PI/2) + 1);
   return 20 * (Math.cos(phi) + 1);
@@ -363,23 +330,49 @@ const transformGeometry = (decData, positionsOffset, widthSegments) => {
   }
 }
 
-function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10) {
+function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, isLog=true) {
   const widthSegments = data.length * Math.pow(2, subdivisions);
   const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
+  console.log(widthSegments, heightSegments);
   const geometry = new THREE.SphereGeometry(
     0,
     widthSegments,
     heightSegments - 1
   );
+
   const positionsOffset = geometry.getAttribute("position").array;
+
+  let inlineTable = [];
+
+  for (let table in data) {
+    inlineTable.push(...data[table]);
+  }
+
+  // Находим радиус как минимальное значение из всех списков или 0
+  const baseSphereRadius = Math.abs(Math.min(0, ...inlineTable)); 
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < data[i].length; j++) {
+      data[i][j] += baseSphereRadius;
+    }
+  }
 
   // Добавляем первую меридиану в конец, чтобы конец интерполировался с началом
   data.push(data[0]);
-  
 
   data = interpolateMatrixRows(data, heightSegments);
 
   const interpolatedData = transposeMatrix(interpolateMatrixRows(transposeMatrix(data), widthSegments));
+
+  // Перевод из логарифмической в абсолютную
+  if (!isLog) {
+    for (let i = 0; i < interpolatedData.length; i++) {
+      for (let j = 0; j < interpolatedData[i].length; j++) {
+        interpolatedData[i][j] -= baseSphereRadius;
+      }
+      interpolatedData[i] = logPolarToPolar(interpolatedData[i]);
+    }
+    
+  }
 
   const decData = offsetsToPoints(interpolatedData, heightSegments);
 
@@ -394,6 +387,43 @@ const logPolarToPolar = (table) => {
     polarList.push(Math.exp(table[i]));
   }
   return polarList;
+}
+
+const calculateTriangleArea = (p1, p2, p3) => {
+  const a = new THREE.Vector3().subVectors(p2, p1);
+  const b = new THREE.Vector3().subVectors(p3, p1);
+  const c = new THREE.Vector3().crossVectors(a, b);
+  return c.length() / 2;
+}
+
+const calculateGeometryArea = (geometry) => {
+  /*
+  Получает индексы вершин треугольников из объекта geometry.
+  Получает позиции (координаты) вершин треугольников из атрибута "position" объекта geometry.
+  Инициализирует переменную area для хранения общей площади, которая изначально равна нулю.
+  Затем проходится по каждому треугольнику в сетке, используя индексы. При этом шаг итерации составляет 3,
+  так как каждый треугольник задается тремя вершинами.
+  Для каждого треугольника извлекает позиции трех его вершин и создает объекты THREE.Vector3,
+  которые представляют собой трехмерные векторы с координатами этих вершин.
+  Вычисляет площадь треугольника, используя вспомогательную функцию calculateTriangleArea.
+  Добавляет площадь текущего треугольника к общей площади area.
+  После обработки всех треугольников возвращает общую площадь поверхности геометрического объекта.
+  */
+  const index = geometry.index;
+  const positions = geometry.getAttribute("position");
+  let area = 0;
+
+  for (let i = 0; i < index.count; i += 3) {
+    const index1 = index.getX(i);
+    const index2 = index.getY(i);
+    const index3 = index.getZ(i);
+    const p1 = new THREE.Vector3(positions.getX(index1), positions.getY(index1), positions.getZ(index1));
+    const p2 = new THREE.Vector3(positions.getX(index2), positions.getY(index2), positions.getZ(index2));
+    const p3 = new THREE.Vector3(positions.getX(index3), positions.getY(index3), positions.getZ(index3));
+    const triangleArea = calculateTriangleArea(p1, p2, p3);
+    area += triangleArea;
+  }
+  return area;
 }
 
 
@@ -417,7 +447,7 @@ export const createLightRayScene = () => {
 
   const axis = new THREE.AxesHelper(80);
 
-  const n = 10;
+  // const n = 10;
   
   // const tableLeftSide = [];
   // const tableRightSide = [];
@@ -448,26 +478,12 @@ export const createLightRayScene = () => {
     -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
   ]);
 
-  // tableRightSide = logPolarToPolar(tableRightSide);
-  // tableLeftSide = logPolarToPolar(tableLeftSide);
-  // tableTop = logPolarToPolar(tableTop);
-  // tableBottom = logPolarToPolar(tableBottom);
-
 
   // const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
   // const tableLeftSide = new Float32Array([
   //   10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2,
   //   -1,
   // ]);
-
-
-  const baseSphereRadius = Math.abs(Math.min(0, ...tableRightSide, ...tableLeftSide, ...tableTop, ...tableBottom)); 
-  for (let i = 0; i < tableRightSide.length; i++) {
-    tableRightSide[i] += baseSphereRadius;
-    tableLeftSide[i] += baseSphereRadius;
-    tableTop[i] += baseSphereRadius;
-    tableBottom[i] += baseSphereRadius;
-  }
   const data = [tableRightSide, tableTop, tableLeftSide, tableBottom];
 
   // Создание BufferGeometry для сферы
@@ -476,7 +492,10 @@ export const createLightRayScene = () => {
   // const gradient = ["#ffd700", "#0057b7"];
   const gradient = ["#ff0000", "#00ff00", "#0000ff"];
   // const gradient = ["#ff0000"];
-  const geometry = createShapeFromData(data, subdivisions, discreteCoefficient);
+  const geometry = createShapeFromData(data, subdivisions, discreteCoefficient, false);
+  
+  const area = calculateGeometryArea(geometry);
+  console.log(area);
   // paintGradient(geometry, gradient, [0, undefined]);
   // paintGradient(geometry, gradient, [0, 6]);
   // paintGradient(geometry, gradient, [0, 0]);
