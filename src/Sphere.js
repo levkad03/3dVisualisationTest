@@ -427,7 +427,7 @@ const calculateGeometryArea = (geometry) => {
 }
 
 const calculateScaleFactor = (sensitivity, power, area) => {
-  const maxArea = sensitivity/power;
+  const maxArea = power/sensitivity;
   console.log(`max area: ${maxArea}`);
   return maxArea/area;
 }
