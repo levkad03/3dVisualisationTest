@@ -330,6 +330,24 @@ const transformGeometry = (decData, positionsOffset, widthSegments) => {
   }
 }
 
+const squareData = (table) => {
+    const squaredTable = table.map((value) => {
+      return Math.pow(value, 2);
+    });
+    return squaredTable;
+}
+
+const normalizeData = (table, maxValue, minValue) => {
+  //console.log(`max: ${maxValue}`);
+  // console.log(`min: ${minValue}`);
+  const range = maxValue - minValue;
+  // console.log(`range: ${range}`);
+  const normalizedTable = table.map((value) => {
+    return (value - minValue) / range;
+  });
+  return normalizedTable;
+}
+
 function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, isLog=true) {
   const widthSegments = data.length * Math.pow(2, subdivisions);
   const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
@@ -365,13 +383,28 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, i
 
   // Перевод из логарифмической в абсолютную
   if (!isLog) {
+    let maxValue = 0;
+    let minValue;
     for (let i = 0; i < interpolatedData.length; i++) {
       for (let j = 0; j < interpolatedData[i].length; j++) {
         interpolatedData[i][j] -= baseSphereRadius;
       }
+
+      // console.log(interpolatedData[i]);
       interpolatedData[i] = logPolarToPolar(interpolatedData[i]);
+      maxValue = Math.max(...interpolatedData[i], maxValue);
+      minValue = Math.min(...interpolatedData[i]);
     }
-    
+
+    // нормализируем данные
+    for (let i = 0; i < interpolatedData.length; i++) {
+      interpolatedData[i] = normalizeData(interpolatedData[i], maxValue, minValue);
+    }
+
+    // возводим в квадрат те значения, которые получили при переводе в абсолютную шкалу после нормализации
+    for (let i = 0; i < interpolatedData.length; i++) {
+      interpolatedData[i] = squareData(interpolatedData[i]);
+    }
   }
 
   const decData = offsetsToPoints(interpolatedData, heightSegments);
@@ -384,7 +417,8 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, i
 const logPolarToPolar = (table) => {
   const polarList = [];
   for (let i=0; i<table.length; i++) {
-    polarList.push(Math.exp(table[i]));
+    // polarList.push(Math.exp(table[i]));
+    polarList.push(Math.pow(10, 0.1*table[i]));
   }
   return polarList;
 }
@@ -428,10 +462,20 @@ const calculateGeometryArea = (geometry) => {
 
 const calculateScaleFactor = (sensitivity, power, area) => {
   const maxArea = power/sensitivity;
-  console.log(`max area: ${maxArea}`);
+  // console.log(`max area: ${maxArea}`);
   return maxArea/area;
 }
 
+const scaleGeometry = (geometry, scaleFactor) => {
+  const positions = geometry.getAttribute("position").array;
+
+  for (let i = 0; i < positions.length; i += 3) {
+    positions[i] *= scaleFactor;
+    positions[i + 1] *= scaleFactor;
+    positions[i + 2] *= scaleFactor;
+  }
+
+}
 
 export const createLightRayScene = () => {
   // Создание сцены
@@ -503,15 +547,22 @@ export const createLightRayScene = () => {
   // const gradient = ["#ff0000"];
   const geometry = createShapeFromData(data, subdivisions, discreteCoefficient, false);
   
-  const area = calculateGeometryArea(geometry);
+  let area = calculateGeometryArea(geometry);
   console.log(`geometry area: ${area}`);
   
   const scaleFactor = calculateScaleFactor(sensitivity, power, area);
   console.log(`scale factor: ${scaleFactor}`);
+
+
+  scaleGeometry(geometry, scaleFactor);
+  area = calculateGeometryArea(geometry);
+  console.log(`[scaling] geometry area : ${area}`);
+
   // paintGradient(geometry, gradient, [0, undefined]);
   // paintGradient(geometry, gradient, [0, 6]);
   // paintGradient(geometry, gradient, [0, 0]);
   paintGradient(geometry, gradient);
+  
 
   // adding 2 materials(matcap and wireframe)
   const material = new THREE.MeshMatcapMaterial({
