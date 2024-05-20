@@ -348,7 +348,7 @@ const normalizeData = (table, maxValue, minValue) => {
   return normalizedTable;
 }
 
-function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, isLog=true) {
+function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, isAbsolute=false) {
   const widthSegments = data.length * Math.pow(2, subdivisions);
   const heightSegments = Math.floor(180 / discreteCoefficient) + 1;
   console.log(widthSegments, heightSegments);
@@ -367,6 +367,7 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, i
   }
 
   // Находим радиус как минимальное значение из всех списков или 0
+  // Опциональное поле baseSphereRadius, пользователь может задать
   const baseSphereRadius = Math.abs(Math.min(0, ...inlineTable)); 
   for (let i = 0; i < data.length; i++) {
     for (let j = 0; j < data[i].length; j++) {
@@ -382,7 +383,7 @@ function createShapeFromData(data, subdivisions = 1, discreteCoefficient = 10, i
   const interpolatedData = transposeMatrix(interpolateMatrixRows(transposeMatrix(data), widthSegments));
 
   // Перевод из логарифмической в абсолютную
-  if (!isLog) {
+  if (isAbsolute) {
     let maxValue = 0;
     let minValue;
     for (let i = 0; i < interpolatedData.length; i++) {
@@ -479,117 +480,209 @@ const scaleGeometry = (geometry, scaleFactor) => {
 
 }
 
+const createTable = (table, length) => {
+  let resultTable = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    resultTable[i] = i < table.length ? table[i] : 0;
+  }
+  return resultTable;
+}
+
 export const createLightRayScene = () => {
   // Создание сцены
   const scene = new THREE.Scene();
+  // scene.background = new THREE.Color(0xffffff);
 
-  // Создание камеры
+  // Создание камерыё
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
   );
-  camera.position.z = 75;
 
   // Создание рендерера
-  const renderer = new THREE.WebGLRenderer({ alpha: false });
+  const renderer = new THREE.WebGLRenderer({ alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
   const axis = new THREE.AxesHelper(80);
 
-  // const n = 10;
+
+  /* 
+  3 радиокнопки: "different", "partially_similar", "similar".
+    1. if "different", то нужно получить данные с четырех инпутов
+    2. if "partially_similar", то нужно получить данные с двух инпутов
+    3. if "similar", то нужно получить данные с одного инпутов 
+  */
+
+
+  // Получаем значение радиокнопки model_type
+  // const model_type = document.querySelector('input[name="model_type"]:checked').value; 
+  const model_type = "different";
+
+  const discreteCoefficient = 4;
+  const tableLength = Math.floor(180 / discreteCoefficient) + 1;
+
+  let tableRightSide, tableLeftSide, tableTop, tableBottom;
+  let data;
+
+  switch (model_type) {
+    case "different":
+      // tableRightSide = createTable(new Float32Array([
+      //   0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
+      //   -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
+      //   -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
+      // ]), tableLength)
+
+      tableRightSide = new Float32Array([
+        0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
+        -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
+        -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
+      ]);
+
+      // tableLeftSide = createTable(new Float32Array([
+      //   0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
+      //   -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
+      //   -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
+      // ]), tableLength)
+      tableLeftSide = new Float32Array([
+        0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
+        -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
+        -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
+      ]);
+
+      // tableTop = createTable(new Float32Array([
+      //   0, -0.05, -0.8, -2.5, -5, -7.6, -11.3, -17, -26, -23, -22, -22, -21.5,
+      //   -22.5, -22, -25, -24.5, -23.5, -24, -22.5, -23, -22, -24, -26, -22, -25,
+      //   -29, -34, -28.4, -28.4, -27.5, -31, -26, -24, -20, -22, -26,
+      // ]), tableLength)
+      tableTop = new Float32Array([
+        0, -0.05, -0.8, -2.5, -5, -7.6, -11.3, -17, -26, -23, -22, -22, -21.5,
+        -22.5, -22, -25, -24.5, -23.5, -24, -22.5, -23, -22, -24, -26, -22, -25,
+        -29, -34, -28.4, -28.4, -27.5, -31, -26, -24, -20, -22, -26,
+      ]);
+
+      // tableBottom = createTable(new Float32Array([
+      //   0, -0.8, -2, -4, -6.7, -10, -14.5, -20, -21.6, -24, -24, -23.3, -24, -23,
+      //   -23.5, -23.6, -30, -30.8, -34.5, -32.5, -27.5, -28.3, -31.3, -33, -30, -26,
+      //   -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
+      // ]), tableLength)
+      tableBottom = new Float32Array([
+        0, -0.8, -2, -4, -6.7, -10, -14.5, -20, -21.6, -24, -24, -23.3, -24, -23,
+        -23.5, -23.6, -30, -30.8, -34.5, -32.5, -27.5, -28.3, -31.3, -33, -30, -26,
+        -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
+      ]);
+
+      data = [tableRightSide, tableTop, tableLeftSide, tableBottom];
+      break;
+    case "partially_similar":
+      // tableRightSide = createTable(new Float32Array(["some_data_from_input_1"]), tableLength)
+      tableRightSide = new Float32Array([
+        0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
+        -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
+        -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
+      ]);
+
+      // tableLeftSide = createTable(new Float32Array(["some_data_from_input_2"]), tableLength)
+      tableLeftSide = new Float32Array([
+        0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
+        -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
+        -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
+      ]);
+      data = [tableRightSide, tableLeftSide];
+      break;
+    case "similar":
+      // tableRightSide = createTable(new Float32Array(["some_data_from_input"]), tableLength)
+      tableRightSide = new Float32Array([
+        0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
+        -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
+        -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
+      ]);
+      data = [tableRightSide];
+      break;
+    default:
+      console.error(`Unknown model type: ${model_type}`)
+      break;
+  }
+
   
-  // const tableLeftSide = [];
-  // const tableRightSide = [];
-  // for (let i = 0; i < n; i++) {
-  //   tableLeftSide.push(testPolarFunction((i * Math.PI) / n + Math.PI));
-  //   tableRightSide.push(testPolarFunction((-i * Math.PI) / n + Math.PI));
-  // }
-  let tableRightSide = new Float32Array([
-    0, -0.3, -0.4, -1.5, -1.7, -2, -2.5, -2.6, -3.4, -5, -6, -8, -9, -10.8,
-    -12.6, -14.5, -16.7, -20, -24.5, -30, -33, -25, -28, -24.5, -22.5, -24.5,
-    -23.3, -25, -26.3, -29, -33.4, -23, -23, -22.3, -25, -32, -33,
-  ]);
-  let tableLeftSide = new Float32Array([
-    0, -0.05, -0.2, -0.7, -1.7, -2.5, -3.3, -3.5, -5, -5.4, -5.5, -6, -7.5,
-    -8.33, -9.5, -11, -11.7, -12, -15, -16.7, -16.7, -20, -19, -16.7, -18.3,
-    -23.3, -30, -23.8, -20, -24, -23.3, -32.5, -27.5, -28.5, -33.5, -31, -33,
-  ]);
-
-  let tableTop = new Float32Array([
-    0, -0.05, -0.8, -2.5, -5, -7.6, -11.3, -17, -26, -23, -22, -22, -21.5,
-    -22.5, -22, -25, -24.5, -23.5, -24, -22.5, -23, -22, -24, -26, -22, -25,
-    -29, -34, -28.4, -28.4, -27.5, -31, -26, -24, -20, -22, -26,
-  ]);
-
-  let tableBottom = new Float32Array([
-    0, -0.8, -2, -4, -6.7, -10, -14.5, -20, -21.6, -24, -24, -23.3, -24, -23,
-    -23.5, -23.6, -30, -30.8, -34.5, -32.5, -27.5, -28.3, -31.3, -33, -30, -26,
-    -25, -22.5, -21.6, -25, -28, -27, -31, -29, -26.7, -26, -26,
-  ]);
-
-  const sensitivity = 0.015;
-  const power = 1;
 
 
-  // const tableRightSide = new Float32Array([10, 9.9, 8, 7, 4, 2, -2, -6, -10, -13, -8, -6, -6.5, -8, -10, -7, -3.5, -1.5, -1]);
-  // const tableLeftSide = new Float32Array([
-  //   10, 9.9, 7.8, 6, 3, 0, -4, -7.5, -10, -10, -7, -5, -5, -7, -9, -8, -4, -2,
-  //   -1,
-  // ]);
-  const data = [tableRightSide, tableTop, tableLeftSide, tableBottom];
+  if (["different", "partially_similar", "similar"].includes(model_type)){
+    // Входные данные - not required
+    const sensitivity = 0.015;
+    const power = 1;
 
-  // Создание BufferGeometry для сферы
-  const discreteCoefficient = 2;
-  const subdivisions = 4;
-  // const gradient = ["#ffd700", "#0057b7"];
-  const gradient = ["#ff0000", "#00ff00", "#0000ff"];
-  // const gradient = ["#ff0000"];
-  const geometry = createShapeFromData(data, subdivisions, discreteCoefficient, false);
+
+    const subdivisions = 4;
+    const gradient = ["#ff0000", "#00ff00", "#0000ff"];
+    /* 
+      3 радиокнопки: "log_model", "absolute_model", "scale_model".
+        1. if "log_model", то нужно построить 3д фигуру без перевода в абсолютную шкалу
+        2. if "absolute_model", то нужно построить 3д фигуру, предварительно переведя в абсолютную шкалу
+        3. if "scale_model", то нужно построить 3д фигуру, предварительно сделав 2. и последующий код
+    */
+
+    // Получаем значение радиокнопки model_result
+    // const model_result = document.querySelector('input[name="model_result"]:checked').value; 
+    const model_result = "log_model";
+    let geometry;
+    
+    switch (model_result) {
+      case "log_model":
+        geometry = createShapeFromData(data, subdivisions, discreteCoefficient, false);
+        paintGradient(geometry, gradient);
+        camera.position.z = 75;
+        break;
+      case "absolute_model":
+        geometry = createShapeFromData(data, subdivisions, discreteCoefficient, true);
+        paintGradient(geometry, gradient);
+        camera.position.z = 1.5;
+        break;
+      case "scale_model":
+        if (sensitivity > 0 && power > 0){
+          geometry = createShapeFromData(data, subdivisions, discreteCoefficient, true);
+          let area = calculateGeometryArea(geometry);
+          console.log(`geometry area : ${area}`);
   
-  let area = calculateGeometryArea(geometry);
-  console.log(`geometry area: ${area}`);
+          const scaleFactor = calculateScaleFactor(sensitivity, power, area);
+          scaleGeometry(geometry, scaleFactor);
+          area = calculateGeometryArea(geometry);
+          console.log(`[scaling] geometry area : ${area}`);
+          
+          paintGradient(geometry, gradient);
+          camera.position.z = 20;
+        }
+        break;
+      default:
+        break;
+    }
+    
+
+    // adding 2 materials(matcap and wireframe)
+    const material = new THREE.MeshMatcapMaterial({
+      color: 0xffffff,
+      flatShading: true,
+      vertexColors: true,
+    });
+
+    const wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      wireframe: true,
+      transparent: true,
+    });
+
+    let mesh = new THREE.Mesh(geometry, material);
+    let wireframe = new THREE.Mesh(geometry, wireframeMaterial);
+    mesh.add(wireframe);
+
+    // Добавление меша на сцену
+    scene.add(axis);
+    scene.add(mesh);
+    // scene.add(wireframe);
+  }
   
-  const scaleFactor = calculateScaleFactor(sensitivity, power, area);
-  console.log(`scale factor: ${scaleFactor}`);
-
-
-  scaleGeometry(geometry, scaleFactor);
-  // const scaleMatrix = new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor);
-  // geometry.applyMatrix4(scaleMatrix);
-  area = calculateGeometryArea(geometry);
-  console.log(`[scaling] geometry area : ${area}`);
-
-  // paintGradient(geometry, gradient, [0, undefined]);
-  // paintGradient(geometry, gradient, [0, 6]);
-  // paintGradient(geometry, gradient, [0, 0]);
-  paintGradient(geometry, gradient);
-  
-
-  // adding 2 materials(matcap and wireframe)
-  const material = new THREE.MeshMatcapMaterial({
-    color: 0xffffff,
-    flatShading: true,
-    vertexColors: true,
-    shininess: 0,
-  });
-
-  const wireframeMaterial = new THREE.MeshBasicMaterial({
-    color: 0x000000,
-    wireframe: true,
-    transparent: true,
-  });
-
-  let mesh = new THREE.Mesh(geometry, material);
-  let wireframe = new THREE.Mesh(geometry, wireframeMaterial);
-  mesh.add(wireframe);
-
-  // Добавление меша на сцену
-  scene.add(axis);
-  scene.add(mesh);
-
   // Рендеринг сцены
   renderer.render(scene, camera);
 
